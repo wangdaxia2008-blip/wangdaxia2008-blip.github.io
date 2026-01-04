@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>单词随机背诵 — 离线版</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1724;
+      --accent:#4fd1c5;
+      --text:#e6eef6;
+      --muted:#9fb0c6;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#081028 0%,#071226 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft Yahei",sans-serif}
+    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(6px)}
+    .btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:8px 12px;border-radius:10px;font-size:15px;cursor:pointer}
+    .small{padding:6px 10px;font-size:14px}
+    .container{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:28px 16px}
+    .card{width:100%;max-width:720px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:26px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:0 12px 30px rgba(2,6,23,0.6)}
+    .word{font-size:48px;font-weight:700;letter-spacing:1px;cursor:pointer;user-select:none}
+    .example{font-size:16px;color:var(--muted);text-align:center;min-height:48px;padding:0 6px}
+    .controls{display:flex;gap:10px;align-items:center}
+    .counter{font-size:13px;color:var(--muted)}
+
+    /* Overview list */
+    .listView{display:none;padding:18px;max-width:900px;margin:12px auto 60px;border-radius:12px;background:linear-gradient(180deg,#071226,#071a2a);border:1px solid rgba(255,255,255,0.04);box-shadow:0 8px 24px rgba(2,6,23,0.6)}
+    .listHeader{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    table{width:100%;border-collapse:collapse;color:var(--text)}
+    th,td{padding:10px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left}
+    th{color:var(--muted);font-size:13px}
+    tr.current{background:linear-gradient(90deg, rgba(79,209,197,0.06), rgba(79,209,197,0.02))}
+
+    /* popup */
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:1000}
+    .popup{background:#fff;color:#06202a;padding:18px;border-radius:10px;max-width:420px;width:92%;box-sizing:border-box}
+    .popup h3{margin:0 0 8px 0}
+    .popup .meaning{font-size:18px;margin-bottom:12px}
+    .row{display:flex;gap:8px;align-items:center}
+
+    @media (max-width:420px){.word{font-size:34px}}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="overviewBtn" class="btn small">全览</button>
+      <div id="status" class="counter">已加载 20 个单词</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="shuffleBtn" class="btn small">重新打乱</button>
+      <button id="resetBtn" class="btn small">重置顺序</button>
+    </div>
+  </div>
+
+  <div class="container" id="mainView">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="word" class="word" tabindex="0" aria-role="button" title="点击查看释义（或按空格/回车）"></div>
+        <button id="playBtn" class="btn small" title="播放发音">🔊 发音</button>
+      </div>
+      <div id="example" class="example"></div>
+
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;width:100%">
+        <button id="prevBtn" class="btn small">上一个</button>
+        <button id="nextBtn" class="btn small">下一个</button>
+        <div id="progress" class="counter">0 / 0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="listView" id="listView">
+    <div class="listHeader">
+      <div style="font-size:16px;color:var(--text)">单词全览</div>
+      <div style="display:flex;gap:8px">
+        <button id="backBtn" class="btn small">返回</button>
+        <button id="downloadBtn" class="btn small">导出 CSV</button>
+      </div>
+    </div>
+    <div style="overflow:auto;max-height:60vh;padding:12px">
+      <table id="overviewTable">
+        <thead><tr><th>#</th><th>单词</th><th>释义</th><th>例句</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="popup">
+      <h3 id="popupWord">单词释义</h3>
+      <div class="meaning" id="popupMeaning"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="popupPlay" class="btn small">🔊 发音</button>
+        <button id="popupClose" class="btn small">取消</button>
+        <button id="popupOk" class="btn small">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======== 这里嵌入你 Excel 的 20 个单词（已由我导入） ========
+    const words = [
+      {word:"discourage", example:"His parents tried to discourage him from quitting school. (from)", meaning:"vt.（使）气馁；打消（做…的念头）"},
+      {word:"abnormal", example:"The doctor was worried about an abnormal growth on the patient's arm. (about / on)", meaning:"a.反常的,变态的"},
+      {word:"abolish", example:"The government decided to abolish the old tax in all regions next year. (in)", meaning:"v.废除,废止"},
+      {word:"navy", example:"She served in the navy for five years. (in)", meaning:"n.海军"},
+      {word:"oval", example:"The mirror above the fireplace was set in an elegant oval frame. (in)", meaning:"n.&adj.椭圆；椭圆形的"},
+      {word:"marble", example:"The statue was carved out of white marble. (out of)", meaning:"n.大理石"},
+      {word:"massive", example:"The building has a massive stone wall around it. (around)", meaning:"a.巨大的"},
+      {word:"stubborn", example:"She remained stubborn in her refusal despite their arguments. (in)", meaning:"a.固执的,倔强的"},
+      {word:"holy", example:"The mountain is regarded as a holy place by the villagers. (as / by)", meaning:"a.神圣的"},
+      {word:"grain", example:"A single grain of rice fell onto the floor. (of / onto)", meaning:"n.谷物,谷类"},
+      {word:"fierce", example:"The team showed fierce determination in the final minutes. (in)", meaning:"a.猛烈的"},
+      {word:"discrimination", example:"The law forbids discrimination against candidates on the basis of race. (against / on / of)", meaning:"n.歧视"},
+      {word:"fragile", example:"Handle the package with care; the contents are fragile.", meaning:"a.易碎的"},
+      {word:"feature", example:"One of the new phone's best features is its battery life.", meaning:"n.特征,特点"},
+      {word:"engage", example:"She tried to engage the students with an interesting question.", meaning:"v.吸引,使从事"},
+      {word:"diminish", example:"His influence over the group began to diminish.", meaning:"v.减少,降低"},
+      {word:"courage", example:"It takes great courage to speak up in front of an audience.", meaning:"n.勇气"},
+      {word:"banquet", example:"They attended a grand banquet to celebrate the anniversary.", meaning:"n.宴会"},
+      {word:"ancient", example:"The ruins are ancient, dating back thousands of years.", meaning:"a.古老的"},
+      {word:"ancillary", example:"We need ancillary equipment to complete the installation.", meaning:"a.辅助的"}
+    ];
+    // ==================================================================
+
+    let order = words.map((_,i)=>i);
+    let pos = 0;
+
+    // Utilities
+    function shuffleOrder(){
+      for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+    }
+    function updateProgress(){
+      document.getElementById('progress').innerText = (Math.min(pos+1, order.length)) + ' / ' + order.length;
+    }
+
+    // Show a card
+    function showCard(index){
+      if(order.length===0) return;
+      if(index < 0) index = 0;
+      if(index >= order.length){
+        document.getElementById('word').innerText = '已完成全部单词 🎉';
+        document.getElementById('example').innerText = '点击重新打乱或重置开始新一轮。';
+        updateProgress();
+        return;
+      }
+      pos = index;
+      const it = words[order[pos]];
+      document.getElementById('word').innerText = it.word;
+      document.getElementById('example').innerText = it.example || '';
+      updateProgress();
+      highlightOverviewCurrent(order[pos]);
+    }
+
+    // Next / Prev
+    document.getElementById('nextBtn').addEventListener('click', ()=>{
+      if(pos < order.length-1) pos++;
+      showCard(pos);
+    });
+    document.getElementById('prevBtn').addEventListener('click', ()=>{
+      if(pos > 0) pos--;
+      showCard(pos);
+    });
+
+    // Play pronunciation (separate button)
+    function detectLang(text){
+      if(!text) return 'en-US';
+      const ascii = text.replace(/[^ -~]/g,'');
+      if(ascii.length / Math.max(1, text.length) > 0.6) return 'en-US';
+      return 'zh-CN';
+    }
+    function speak(text){
+      if(!('speechSynthesis' in window)) return alert('当前浏览器不支持发音');
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = detectLang(text);
+      const voices = speechSynthesis.getVoices();
+      if(voices && voices.length){
+        let v = voices.find(x=>x.lang && x.lang.toLowerCase().startsWith(u.lang.split('-')[0]));
+        if(v) u.voice = v;
+      }
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+    document.getElementById('playBtn').addEventListener('click', ()=>{
+      if(order.length===0) return;
+      const it = words[order[pos]];
+      speak(it.word);
+    });
+
+    // Click word to show meaning popup
+    document.getElementById('word').addEventListener('click', ()=>{ openPopup(); });
+    document.getElementById('word').addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') openPopup(); });
+
+    // Popup controls
+    function openPopup(){
+      if(order.length===0) return;
+      const it = words[order[pos]];
+      document.getElementById('popupWord').innerText = it.word;
+      document.getElementById('popupMeaning').innerText = it.meaning || '(无释义)';
+      document.getElementById('overlay').style.display = 'flex';
+    }
+    document.getElementById('popupOk').addEventListener('click', ()=>{ document.getElementById('overlay').style.display='none'; if(pos < order.length-1) pos++; showCard(pos); });
+    document.getElementById('popupClose').addEventListener('click', ()=>{ document.getElementById('overlay').style.display='none'; });
+    document.getElementById('popupPlay').addEventListener('click', ()=>{ const it = words[order[pos]]; speak(it.word); });
+
+    // Overview
+    document.getElementById('overviewBtn').addEventListener('click', ()=>{ buildOverview(); document.getElementById('mainView').style.display='none'; document.getElementById('listView').style.display='block'; });
+    document.getElementById('backBtn').addEventListener('click', ()=>{ document.getElementById('listView').style.display='none'; document.getElementById('mainView').style.display='block'; showCard(pos); });
+
+    function buildOverview(){
+      const tbody = document.querySelector('#overviewTable tbody');
+      tbody.innerHTML = '';
+      words.forEach((w, idx)=>{
+        const tr = document.createElement('tr');
+        if(order[pos] === idx) tr.classList.add('current');
+        const td1 = document.createElement('td'); td1.innerText = idx+1;
+        const td2 = document.createElement('td'); td2.innerText = w.word;
+        const td3 = document.createElement('td'); td3.innerText = w.meaning;
+        const td4 = document.createElement('td'); td4.innerText = w.example;
+        tr.append(td1,td2,td3,td4);
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', ()=>{
+          const newPos = order.indexOf(idx);
+          if(newPos !== -1){ pos = newPos; document.getElementById('listView').style.display='none'; document.getElementById('mainView').style.display='block'; showCard(pos); }
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    // export CSV
+    document.getElementById('downloadBtn').addEventListener('click', ()=>{
+      const rows = [['#','单词','释义','例句']];
+      words.forEach((w,idx)=> rows.push([idx+1, w.word, w.meaning, w.example]));
+      const csv = rows.map(r=>r.map(c=>(''+c).replace(/"/g,'""')).map(c=>c.includes(',')||c.includes('\n')?`"${c}"`:c).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'words_overview.csv'; document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    // shuffle & reset
+    document.getElementById('shuffleBtn').addEventListener('click', ()=>{ shuffleOrder(); pos = 0; showCard(pos); });
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ order = words.map((_,i)=>i); pos = 0; showCard(pos); });
+
+    // highlight current in overview (if open)
+    function highlightOverviewCurrent(currentIdx){
+      const tbody = document.querySelector('#overviewTable tbody');
+      if(!tbody) return;
+      const rows = tbody.children;
+      for(let i=0;i<rows.length;i++){ rows[i].classList.remove('current'); }
+      const el = Array.from(rows).find(r=> r.children[1] && r.children[1].innerText === words[currentIdx].word);
+      if(el) el.classList.add('current');
+    }
+
+    // init
+    (function init(){
+      // ensure order default
+      order = words.map((_,i)=>i);
+      shuffleOrder();
+      pos = 0;
+      showCard(pos);
+    })();
+
+    // accessibility: space or enter on body when focus on word
+    document.addEventListener('keydown', (e)=>{
+      if((e.key === ' ' || e.key === 'Enter') && document.activeElement === document.getElementById('word')){
+        e.preventDefault(); openPopup();
+      }
+    });
+  </script>
+</body>
+</html>

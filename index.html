@@ -1,74 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>背单词 — 上传并练习</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>背单词</title>
+
+  <!-- 苹果系统字体 -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- SheetJS 解析 Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div id="app">
-    <!-- theme toggle top-right -->
-    <div class="topbar">
-      <div class="left"></div>
-      <div class="right">
-        <button id="historyBtn" class="small ghost">上传记录</button>
-        <button id="themeToggle" class="small ghost">🌙</button>
-      </div>
-    </div>
 
-    <!-- uploader view -->
-    <main id="uploaderView" class="center-screen">
-      <div id="uploaderCircle" class="circle" role="button" aria-label="上传单词表">
-        <div class="circle-inner">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M12 3v10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M5 12l7-7 7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M5 21h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          <div class="label">点击上传 Excel 或 CSV</div>
-        </div>
-      </div>
-      <div class="hint">支持 .xlsx .xls .csv — 列顺序：单词 | 例句 | 释义</div>
-      <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" style="display:none;">
-    </main>
+<!-- 顶部控制栏 -->
+<div class="top-bar">
+  <button id="historyBtn">上传记录</button>
+  <button id="themeBtn">🌙</button>
+</div>
 
-    <!-- study view -->
-    <section id="studyView" class="hidden">
-      <div class="study-top">
-        <button id="backBtn" class="btn ghost">⬅ 返回</button>
-        <div class="spacer"></div>
-        <button id="playBtn" class="btn">🔊 发音</button>
-      </div>
+<!-- 首页上传 -->
+<div id="home" class="center">
+  <label class="upload-circle">
+    +
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+  </label>
+  <p>点击上传 Excel / CSV</p>
+</div>
 
-      <div class="card">
-        <div id="word" class="bigword" tabindex="0" role="button" title="点击查看释义"></div>
-        <div id="example" class="example"></div>
-        <div class="controls">
-          <button id="prevBtn" class="btn ghost">上一个</button>
-          <button id="nextBtn" class="btn primary">下一个</button>
-        </div>
-      </div>
-    </section>
+<!-- 背词界面 -->
+<div id="viewer" class="hidden">
+  <div id="word"></div>
+  <div id="example"></div>
 
-    <!-- history modal -->
-    <div id="historyModal" class="modal hidden">
-      <div class="modal-inner">
-        <div class="modal-header">
-          <div>上传记录</div>
-          <div><button id="clearHistory" class="small ghost">清空</button></div>
-        </div>
-        <div class="modal-body" id="historyList"></div>
-        <div class="modal-footer">
-          <button id="closeHistory" class="btn">关闭</button>
-        </div>
-      </div>
-    </div>
-
+  <div class="controls">
+    <button id="prevBtn">上一个</button>
+    <button id="speakBtn">🔊 发音</button>
+    <button id="nextBtn">下一个</button>
   </div>
+</div>
 
-  <!-- SheetJS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="app.js"></script>
+<!-- 中文释义弹窗 -->
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <div id="meaning"></div>
+    <button id="confirmBtn">确定</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>

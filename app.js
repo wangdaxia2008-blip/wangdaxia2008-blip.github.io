@@ -1,24 +1,25 @@
-const fileInput = document.getElementById("fileInput");
-const home = document.getElementById("home");
-const viewer = document.getElementById("viewer");
-
-const wordEl = document.getElementById("word");
-const exampleEl = document.getElementById("example");
-const meaningEl = document.getElementById("meaning");
-
-const modal = document.getElementById("modal");
-const confirmBtn = document.getElementById("confirmBtn");
-
-const nextBtn = document.getElementById("nextBtn");
-const prevBtn = document.getElementById("prevBtn");
-const speakBtn = document.getElementById("speakBtn");
-const themeBtn = document.getElementById("themeBtn");
+const app = document.getElementById("app");
 
 let words = [];
 let index = 0;
 
-/* 读取文件 */
-fileInput.addEventListener("change", e => {
+/* ========== 首页 ========== */
+function renderHome() {
+  app.innerHTML = `
+    <div class="center">
+      <label class="upload-circle">
+        +
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+      </label>
+      <p>点击上传 Excel / CSV</p>
+    </div>
+  `;
+
+  document.getElementById("fileInput").addEventListener("change", loadFile);
+}
+
+/* ========== 读取 Excel ========== */
+function loadFile(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -38,52 +39,61 @@ fileInput.addEventListener("change", e => {
       }));
 
     index = Math.floor(Math.random() * words.length);
-    showWord();
-
-    home.classList.add("hidden");
-    viewer.classList.remove("hidden");
+    renderStudy(); // ⚠️ 直接切换，不留首页
   };
   reader.readAsArrayBuffer(file);
-});
-
-/* 显示单词 */
-function showWord() {
-  const w = words[index];
-  wordEl.textContent = w.word;
-  exampleEl.textContent = w.example;
 }
 
-/* 点击单词显示释义 */
-wordEl.addEventListener("click", () => {
-  meaningEl.textContent = words[index].meaning;
-  modal.classList.remove("hidden");
-});
+/* ========== 背词界面 ========== */
+function renderStudy() {
+  const w = words[index];
 
-/* 确认进入下一个 */
-confirmBtn.addEventListener("click", () => {
-  modal.classList.add("hidden");
-  index = (index + 1) % words.length;
-  showWord();
-});
+  app.innerHTML = `
+    <div id="viewer">
+      <div id="word">${w.word}</div>
+      <div id="example">${w.example}</div>
 
-/* 上下 */
-nextBtn.onclick = () => {
+      <div class="controls">
+        <button id="prev">上一个</button>
+        <button id="speak">🔊 发音</button>
+        <button id="next">下一个</button>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="modal">
+      <div class="modal-content">
+        <div id="meaning">${w.meaning}</div>
+        <button id="ok">确定</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("word").onclick = () =>
+    document.getElementById("modal").classList.remove("hidden");
+
+  document.getElementById("ok").onclick = () => {
+    nextWord();
+  };
+
+  document.getElementById("next").onclick = nextWord;
+  document.getElementById("prev").onclick = prevWord;
+
+  document.getElementById("speak").onclick = () => {
+    const u = new SpeechSynthesisUtterance(w.word);
+    u.lang = "en-US";
+    speechSynthesis.speak(u);
+  };
+}
+
+function nextWord() {
   index = (index + 1) % words.length;
-  showWord();
-};
-prevBtn.onclick = () => {
+  renderStudy();
+}
+
+function prevWord() {
   index = (index - 1 + words.length) % words.length;
-  showWord();
-};
+  renderStudy();
+}
 
-/* 发音 */
-speakBtn.onclick = () => {
-  const u = new SpeechSynthesisUtterance(words[index].word);
-  u.lang = "en-US";
-  speechSynthesis.speak(u);
-};
-
-/* 日夜模式 */
-themeBtn.onclick = () => {
-  document.body.classList.toggle("dark");
-};
+/* 启动 */
+renderHome();

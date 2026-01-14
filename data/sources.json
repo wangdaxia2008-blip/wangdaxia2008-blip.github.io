@@ -1,0 +1,27 @@
+[
+  {
+    "id": "word1",
+    "label": "Word List 1",
+    "file": "word1.json"
+  },
+  {
+    "id": "word2",
+    "label": "Word List 2",
+    "file": "word2.json"
+  },
+  {
+    "id": "word3",
+    "label": "Word List 3",
+    "file": "word3.json"
+  },
+  {
+    "id": "word4",
+    "label": "Word List 4",
+    "file": "word4.json"
+  },
+  {
+    "id": "word5",
+    "label": "Word List 5",
+    "file": "word5.json"
+  }
+]
